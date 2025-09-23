@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 np.set_printoptions(linewidth=np.inf)
 
 n = 30
+m=3
 start = -2
 stop = 2
 x = np.linspace(start, stop, n)
@@ -11,11 +12,10 @@ eps = 1
 np.random.seed(1)
 r = np.random.rand(n) * eps
 y = x * np.cos(r + 0.5 * x**3) + np.sin(0.5 * x**3)
+y2 = 4 * x**5 - 5 * x**4 - 20 * x**3 + 10 * x**2 + 40 * x + 10 + r
 
-v = np.vander(x, N = 20, increasing = True)
-Q,R = np.linalg.qr(v)
+v = np.vander(x, N = m, increasing = True)
 
-QTb = Q.T @ y
 
 def back_subst(A: np.ndarray, b: np.ndarray):
 	n = b.shape[0]
@@ -24,55 +24,79 @@ def back_subst(A: np.ndarray, b: np.ndarray):
 	x = np.zeros(n)
 	x[n-1] = b[n-1] / A[n-1, n-1]
 
-	C = np.zeros((n,n))
 	for i in range(n-2, -1, -1):
 		x[i] =  (b[i] - A[i, i+1:] @ x[i+1:]) / A[i,i]
 	return x
 
 
-
-
-
-#AA = np.array([[1,2,3], [0,7,4], [0,0,3]])
-#bb = np.ones(3)
-
-coefs = back_subst(R, QTb)[::-1]
-
-#print(coefs[::-1])
-p = np.poly1d(coefs)
-#print(p(xs).shape)
-
-
-plt.plot(x, p(x), label = "lstsq", color = "r")
-plt.plot(x,y, 'o')
-plt.xlabel('x')
-plt.ylabel('y')
-#plt.show()
-
-
-'''exc 2'''
-
-B = v.T @ v
-
 def cholesky(A):
+	A = A.copy().astype(float)
 	n = A.shape[0]
-	L = np.zeros_like(A, dtype = 'float')
-
-
+	L = np.zeros((n,n))
+	D = np.zeros((n,n))
 	for i in range(n):
-		s = sum(L[i, k]**2 for k in range(i))
-		L[i, i] = np.sqrt(A[i,i] - s)
-
-		for j in range(i+1, n):
-			s = sum(L[j, k] * L[i,k] for k in range(i))
-			L[j, i] = (A[j, i] - s) / L[i,i]
-
-	return L
+		lk = A[:,i] / A[i,i]
+		L[:,i] = lk
+		D[i,i] = A[i,i] 
+		A = A - D[i,i] * np.outer(lk, lk)
+	return L, D
 
 
-chol = cholesky(B)
+def cholesky2(B):
+    n = B.shape[0]
+    L = np.zeros_like(B)
+    for i in range(n):
+        L[i,i] = np.sqrt(B[i,i] - np.sum(L[i,:i]**2))
+        for j in range(i+1, n):
+            L[j,i] = (B[j,i] - np.sum(L[j,:i]*L[i,:i])) / L[i,i]
+    return L
 
-L = cholesky(B)
-print(np.allclose(B, L @ L.T, atol=1e-12, rtol=1e-12))
-#print(L @ L.T)
-#print(B)
+def forward_subst(A: np.ndarray, b: np.ndarray):
+	'''A: nxn matrix, b: nx1 matrix'''
+	n = A.shape[0]
+	x = np.zeros(n)
+	x[0] = b[0] / A[0,0]
+	for i in range(1, n):
+		x[i] = (b[i] - np.dot(A[i, :i], x[:i])) / A[i,i]
+	return x
+
+def solve_cholesky(V, y):
+    B = V.T @ V
+    L = np.linalg.cholesky(B)       # lower-triangular
+    b = V.T @ y
+    z = forward_subst(L, b)
+    c = back_subst(L.T, z)
+    return c
+
+
+def fit_and_plot(dataset, m, x):
+    V = np.vander(x, N=m, increasing=True)
+
+    # --- QR method
+    Q, R = np.linalg.qr(V)
+    coefs_qr = back_subst(R, Q.T @ dataset)
+
+    # --- Normal equations with Cholesky
+    B = V.T @ V
+    L = np.linalg.cholesky(B)
+    b = V.T @ dataset
+    z = forward_subst(L, b)
+    coefs_chol = back_subst(L.T, z)
+
+    # poly1d wants descending order
+    p_qr = np.poly1d(coefs_qr[::-1])
+    p_chol = np.poly1d(coefs_chol[::-1])
+
+    # Plot
+    xx = np.linspace(x.min(), x.max(), 400)
+    plt.scatter(x, dataset, label="data")
+    #plt.plot(xx, p_qr(xx), 'g-', label="QR fit")
+    plt.plot(xx, p_chol(xx), 'r--', label="Cholesky fit")
+    plt.legend()
+    plt.show()
+
+
+#fit_and_plot(dataset = y2, m=3, x = x)
+fit_and_plot(dataset = y2, m=3, x = x)
+
+
