@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 np.set_printoptions(linewidth=np.inf)
 
 n = 30
-m=3
+m=20
 start = -2
 stop = 2
 x = np.linspace(start, stop, n)
@@ -15,7 +15,16 @@ y = x * np.cos(r + 0.5 * x**3) + np.sin(0.5 * x**3)
 y2 = 4 * x**5 - 5 * x**4 - 20 * x**3 + 10 * x**2 + 40 * x + 10 + r
 
 v = np.vander(x, N = m, increasing = True)
+singular_values_V = np.linalg.svd(v.T @ v)[1]
+singular_values_VTV = np.linalg.svd(v.T @ v)[1]
+KA_V = singular_values_V[0] / singular_values_V[-1]
+KA_VTV = singular_values_VTV[0] / singular_values_VTV[-1]
 
+
+print(f"Singular values for\n" \
+"--------------------------------------------\n" \
+"V: {KA_V}\n" \
+"VTV: {KA_VTV}")
 
 def back_subst(A: np.ndarray, b: np.ndarray):
 	n = b.shape[0]
@@ -62,7 +71,7 @@ def forward_subst(A: np.ndarray, b: np.ndarray):
 
 def solve_cholesky(V, y):
     B = V.T @ V
-    L = np.linalg.cholesky(B)       # lower-triangular
+    L = np.linalg.cholesky(B)   
     b = V.T @ y
     z = forward_subst(L, b)
     c = back_subst(L.T, z)
@@ -87,16 +96,13 @@ def fit_and_plot(dataset, m, x):
     p_qr = np.poly1d(coefs_qr[::-1])
     p_chol = np.poly1d(coefs_chol[::-1])
 
-    # Plot
     xx = np.linspace(x.min(), x.max(), 400)
     plt.scatter(x, dataset, label="data")
-    #plt.plot(xx, p_qr(xx), 'g-', label="QR fit")
-    plt.plot(xx, p_chol(xx), 'r--', label="Cholesky fit")
+    plt.plot(xx, p_qr(xx), 'g-', label="QR fit")
+    #plt.plot(xx, p_chol(xx), 'r--', label="Cholesky fit")
     plt.legend()
     plt.show()
 
-
-#fit_and_plot(dataset = y2, m=3, x = x)
-fit_and_plot(dataset = y2, m=3, x = x)
+fit_and_plot(dataset = y, m=20, x = x)
 
 

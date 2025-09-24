@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
 
 def back_subst(U, b):
     n = U.shape[0]
@@ -61,5 +63,5 @@ y  = x * np.cos(r + 0.5 * x**3) + np.sin(0.5 * x**3)
 y2 = x * (np.cos(r + 0.5 * x) + np.sin(0.5 * x**3))
 
 # Degree m=3 (for example)
-fit_and_plot(x, y, 5, title="Dataset 1")
+fit_and_plot(x, y2, 3, title="Dataset 1")
 #fit_and_plot(x, y2, 3, title="Dataset 2")
